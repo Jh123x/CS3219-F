@@ -1,40 +1,27 @@
+import sqlite3
 from flask import Flask, jsonify
+
 
 
 app = Flask(__name__)
 
-cache = {}
+cache = None
+DB_PATH = "server/data/test.db"
 
 
-@app.route('/factor/<path:num>', methods=["GET"])
-def route_factorize(num: str):
-    if(not num.isdigit()):
-        return f"Error: {num} is not a valid integer"
-
-    if (num in cache):
-        return jsonify({
-            'result': cache[num]
-        })
-
-    result = factorize(int(num))
-    cache[num] = result
-    return jsonify({
-        "result": result
-    })
-
-
-def factorize(num: int) -> list:
-    result = {1}
-    curr = 2
-    acc_num = num
-    while (acc_num > 1 and curr < num):
-        if (acc_num % curr != 0):
-            curr += 1
-            continue
-        result.add(curr)
-        acc_num = acc_num // curr
-
-    return sorted(list(result))
+@app.route('/', methods=["GET"])
+def route_factorize():
+    global cache
+    if cache is not None:
+        return cache
+    with sqlite3.connect(DB_PATH) as db:
+        cur = db.cursor()
+        cur.execute("SELECT * FROM data d1 CROSS JOIN data d2 limit 40000")
+        result = []
+        for row in cur.fetchall():
+            result.append(row)
+    cache = jsonify(result)
+    return cache
 
 
 if __name__ == "__main__":
